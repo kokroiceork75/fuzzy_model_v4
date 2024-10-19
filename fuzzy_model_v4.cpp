@@ -42,7 +42,7 @@
 #define stop_max_dis 1.5    /* 停止的距離  */
 #define stop_dis_narrow 0.5  /* ? */
 #define dwall   0.535   /*  希望離牆的值  */ ///0.285(車體邊緣) + 0.35(離牆距離)
-#define max_step 50      /* 最大步數  */  
+#define max_step 20      /* 最大步數  */  
 #define max_tune_step 30   /*  重置點的步數  */
 #define sensor_range 1 /* 感測的範圍:1m */
 #define _input_scale (1/sensor_range)  /* 給感測器讀值正規化的參數  */
