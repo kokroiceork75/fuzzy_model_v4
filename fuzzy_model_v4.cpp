@@ -65,7 +65,7 @@ double delta_x, delta_y, delta_fi;
 static int random_initialized = 0;
 double sick_1[max_step+1],sick_2[max_step+1];
 double delta_x_arr[max_step+1], delta_y_arr[max_step+1], delta_fi_arr[max_step+1];
-double conq_delta_x_arr[max_step+1], conq_delta_y_arr[max_step+1], conq_delta_fi_arr[max_step+1];
+double out_delta_x_arr[max_step+1], out_delta_y_arr[max_step+1], out_delta_fi_arr[max_step+1];
 
 int step ;
 int remained_step, current_stop_step ;
@@ -192,7 +192,7 @@ double  in_mu ;
 double  con[_conq_varl+1] ;
 void    In_mem_fir(double *,int,int) ;
 friend  void Fir_str(double *, int,int) ;
-friend  void fuzzy(double *,int,int); // wei need change,seems not use?
+// friend  void fuzzy(double *,int,int); // wei need change,seems not use? change 註釋
 } ;
 
 C_Rule  _Rule[_max_rule+1] ;
@@ -350,8 +350,8 @@ void execute_process(int c_gen)
       // total_fail_step=0;  //失敗的步數歸零  
       printf("ber = %d\n",ber);
       // wei need change 
-      int step=0; // 原本是沒註解，為了fuzzy()改全局
-      // step = 0; // wei need change first
+      // int step=0; // 原本是沒註解，為了fuzzy()改全局
+      step = 0; // wei need change first, not useful
       robot_position(step);
       remained_step = 0 ; //殘留步數
       current_stop_step = max_step ;   //max_tune_step:重置點的步數 
@@ -367,6 +367,8 @@ void execute_process(int c_gen)
         // wei need change 這裡給予隨機速度
         sick_1[step] = get_random_velocity();
         sick_2[step] = get_random_velocity();
+        printf("速度 sick_1: %lf\n",sick_1[step]); // wei debug
+        printf("速度 sick_2: %lf\n",sick_2[step]);
         double vl = sick_1[step];
         double vr = sick_2[step];
         wb_motor_set_velocity(left_wheel, vl);
@@ -460,7 +462,7 @@ void execute_process(int c_gen)
         // fprintf(fnoise3,"%.10f   \t", parent_pop[i].xreal[jj*_mem_length-_out_varl+2] ) ;  // 右輪  	
         for(int k =1; k <= _conq_varl; k++)		
         {
-          fprintf(fnoise3,"%.10f   \t", parent_pop[i].xreal[jj*_mem_length - _conq_varl + k] ) ;  // 後件部	
+          fprintf(fnoise3,"%.10f\t", parent_pop[i].xreal[jj*_mem_length - _conq_varl + k] ) ;  // 後件部 wei debug	
         }
       }    
       fprintf(fnoise3, "\n") ;
@@ -651,7 +653,7 @@ FILE *fnoise3;
     //  fprintf(fnoise3,"%.10f   \t",  parent_pop[i].xreal[jj*_mem_length-_out_varl+2]  ) ;  // 右輪  
     for(int k =1; k <= _conq_varl; k++)		
     {
-      fprintf(fnoise3,"%.10f   \t", parent_pop[i].xreal[jj*_mem_length - _conq_varl + k] ) ;  // 後件部	
+      fprintf(fnoise3,"%.10f\t", parent_pop[i].xreal[jj*_mem_length - _conq_varl + k] ) ;  // 後件部  wei debug
     }			
     }    
     fprintf(fnoise3, "\n") ;
@@ -860,9 +862,9 @@ void fuzzy(int _rule, int ber, int step, double vl, double vr)
         else
             out_y[j] = num[j] / den[j];  //加權平均法
         
-        conq_delta_x_arr[step] = out_y[1];
-        conq_delta_y_arr[step] = out_y[2];
-        conq_delta_fi_arr[step] = out_y[3];
+        out_delta_x_arr[step] = out_y[1];
+        out_delta_y_arr[step] = out_y[2];
+        out_delta_fi_arr[step] = out_y[3];
         
     }
 }
@@ -878,6 +880,8 @@ void data_printf(int step, int c_gen, int ber, int _in_clu)
 	printf("變化量x == %f\n", out_y[1]) ;
 	printf("變化量y == %f\n", out_y[2]) ; 
 	printf("變化量fi == %f\n", out_y[3]) ; 
+	// printf("parent_real == %f\n", pa) ; 
+
 	fflush(stdout);	
 }
 
@@ -905,9 +909,9 @@ void cost_function()
   double error_x = 0.0, error_y = 0.0, error_fi = 0.0;
   for(int i = 1; i <= max_step; i++)
   {
-    error_x += pow(delta_x_arr[i] - conq_delta_x_arr[i], 2);
-    error_y += pow(delta_y_arr[i] - conq_delta_y_arr[i], 2);
-    error_fi += pow(delta_fi_arr[i] - conq_delta_fi_arr[i], 2);
+    error_x += pow(delta_x_arr[i] - out_delta_x_arr[i], 2);
+    error_y += pow(delta_y_arr[i] - out_delta_y_arr[i], 2);
+    error_fi += pow(delta_fi_arr[i] - out_delta_fi_arr[i], 2);
 
   }
   f1 = error_x + error_y + error_fi;
@@ -918,7 +922,7 @@ void cost_function()
     child_pop[ber].objv[1] = f1 + child_pop[ber].objv[1];
     child_pop[ber].objv[2] = f2 + child_pop[ber].objv[2];
   }
-  else
+  else // c_gen = 1
   {
     parent_pop[ber].objv[1] = f1 + parent_pop[ber].objv[1];
     parent_pop[ber].objv[2] = f2 + parent_pop[ber].objv[2];
@@ -934,9 +938,9 @@ void clear_matrix() // 清除一些全局變量
     delta_x_arr[i] = 0.0;
     delta_y_arr[i] = 0.0;
     delta_fi_arr[i] = 0.0;
-    conq_delta_x_arr[i] = 0.0;
-    conq_delta_y_arr[i] = 0.0;
-    conq_delta_fi_arr[i] = 0.0;
+    out_delta_x_arr[i] = 0.0;
+    out_delta_y_arr[i] = 0.0;
+    out_delta_fi_arr[i] = 0.0;
 
   }
 }
@@ -1822,7 +1826,8 @@ void load_save_parent_rule_and_relative_data()
   {
     for(int jj=1; jj<=nobj; jj++)
     {
-        parent_pop[i].objv[jj]=parent_obj_load[i][jj];        
+      printf("Reading objv[%d][%d]: %Lf\n", i, jj, parent_obj_load[i][jj]); // wei Debug
+      parent_pop[i].objv[jj]=parent_obj_load[i][jj];        
     }   
   }
   FILE *fnoise3;
@@ -2053,7 +2058,7 @@ for (i=1; i<=popsize; i++)
     // fprintf(fpt,"%.10f   \t",  parent_pop[i].xreal[jj*_mem_length-_out_varl+2] * right_wheel_speed  ) ;  // 右輪  
     for(int k=1; k<=9; k++)
     {
-      fprintf(fpt,"%.10f   \t",  parent_pop[i].xreal[jj*_mem_length - _conq_varl + k]) ; 
+      fprintf(fpt,"%.10f\t",  parent_pop[i].xreal[jj*_mem_length - _conq_varl + k]) ; // wei debug
     }	
      	
 
